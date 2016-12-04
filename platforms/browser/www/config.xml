@@ -8,7 +8,7 @@
     </feature>
     <name>trasano</name>
     <description>Transporte Sanitario no Urgente</description>
-    <author email="trasano.uem@gmail.com" href="hhttp://trasano.esy.es">Trasano Team</author>
+    <author email="trasano.uem@gmail.com" href="http://trasano.esy.es">Trasano Team</author>
     <content src="index.html" />
     <gap:plugin name="phonegap-nfc" source="npm" />
     <icon src="icon.png" />
@@ -21,4 +21,5 @@
     <allow-intent href="geo:*" />
     <preference name="DisallowOverscroll" value="true" />
     <preference name="android-minSdkVersion" value="14" />
+    <preference name="Orientation" value="portrait" />
 </widget>

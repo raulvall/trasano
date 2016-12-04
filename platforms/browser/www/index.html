@@ -19,15 +19,16 @@
     specific language governing permissions and limitations
     under the License.
 -->
-<html>
+<html lang="es">
 
 <head>
-    <meta charset="utf-8" />
+    <meta charset="utf-8"/>
     <meta name="format-detection" content="telephone=no" />
     <meta name="msapplication-tap-highlight" content="no" />
     <meta name="viewport" content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width" />
+    
     <!-- This is a wide open CSP declaration. To lock this down for production, see below. -->
-    <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline'; style-src 'self' 'unsafe-inline'; media-src *" />
+    <!-- <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline'; style-src 'self' 'unsafe-inline'; media-src *" /> -->
     <!-- Good default declaration:
     * gap: is required only on iOS (when using UIWebView) and is needed for JS->native communication
     * https://ssl.gstatic.com is required only on Android and is needed for TalkBack to function properly
@@ -42,95 +43,158 @@
     <link href="dist/css/bootstrap.min.css" rel="stylesheet">
 
     <!-- Custom styles for this template -->
-    <link href="dist/css/navbar-fixed-top.css" rel="stylesheet">
-    <link href="dist/css/navbar-static-top.css" rel="stylesheet">
-    <link href="css/index.css" rel="stylesheet" type="text/css"/>
+    <!-- <link href="dist/css/navbar-static-top.css" rel="stylesheet"> -->
+    <link href="dist/css/trasano.css" rel="stylesheet">
 
-    <script>
-        function cerrarAmbulancia()
-        {
-            console.log("index.html -> isONnfc(function)");
-            nfc.showSettings(
-                function ()
-                {
-                    console.log("index.nfc.showSettings.success");
-                    location.href = "pages/cerrar.html"; 
+    <!-- JApache Cordova Library -->
+    <script type="text/javascript" src="cordova.js"></script>  
+
+    <!-- JQuery-mobile -->
+    <script src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
+
+    <!-- Custom library -->
+    <script type="text/javascript" src="js/trasano.js"></script>
+    <script type="text/javascript" src="resource/config.js"></script> 
+
+    <script>          
+        // Waiting to phoneGAP ready 
+        function onLoad() {
+            document.addEventListener("deviceready", onDeviceReady(), false);
+        }
+    
+        // Cordova API is available
+        function onDeviceReady() {
+            $(document).ready(function() { 
+                console.log("index.onDeviceReady");  
+                $(window).load(function() {
+                    console.log("index.window.load");
+                    if (localStorage.getItem("dni") === null || localStorage.getItem("dni") === "") {               
+                        window.location = "pages/registeredUser.html";
+                    } else {
+                        // Check if ambulance was ordered more than 6 hours ago
+                        checkAmbulanceServiceTime();
+                        // Update ambulance service
+                        infoAmbulance();
+                        // Show patient info 
+                        showPatient();    
+                    }
+                    // FUNCTION TO CHECK IF AMBULANCE IS OUT OF DATE
+                    if (localStorage.getItem("serviceTime") != null && localStorage.getItem("serviceTime") != "") {
+                        var serviceTime = new Date(parseInt(localStorage.getItem("serviceTime")));
+                        //serviceTime.setTime(parseInt(localStorage.getItem("serviceTime")));   
+
+                        $("#getAmbulanceButton").empty();
+                        $("#getAmbulanceButton").append(
+                            "<div class='alert alert-info' role='alert'>" +
+                                "<a class='text-right' href='javascript:showAmbulanceInfo();''>" + 
+                                "<span class='glyphicon glyphicon-eye-open' aria-hidden='true'></span>   " +  
+                                "Ambulancia solicitada: <strong>" 
+                                    + serviceTime.toLocaleTimeString() + " (" + serviceTime.toLocaleDateString() + ")</strong></a>" + 
+                            "</div>"
+                        );    
+                        $("#claimAndCancelButton").append(
+                            "<a class='btn btn-warning btn-lg pull-right' href='javascript:showClaimMODAL();'' role='button'>" + 
+                            "Reclamar</a>" + 
+                            "<a class='btn btn-danger btn-lg pull-left' href='javascript:showCancelMODAL();'' role='button'>" + 
+                            "Cancelar</a>");
+                    } else {
+                        $("#claimAndCancelButton").empty();
+                        $("#getAmbulanceButton").append(
+                        "<a class='btn btn btn-success btn-lg btn-block' href='javascript:showCloseMODAL();'' role='button'>" + 
+                        "Solicitar ambulancia</a>");
+                    }
+                });                    
+            });
+        }
+
+        function getAmbulance() {
+            // FIRST check if is NFC Device
+            console.log("index.getAmbulance");
+            nfc.enabled(
+                function () {
+                    console.log("index.getAmbulance.nfc.enabled.success");
+                    initMimeTypeListener(function(){
+                        console.log("index.getAmbulance.initMimeTypeListener.callback.function");
+                    });      
                 },
-            
-                function ()
-                {
-                    alert('No se puede mostrar la configuración NFC');
-                    console.log("index.nfc.showSettings.failure");
-                }
-            );                  
+                function (errorCode) {
+                    console.log("index.getAmbulance.nfc.enabled.failure");
+                    var err = errorCode;
+
+                    switch (err) {
+                        case "NO_NFC":
+                            console.log("index.getAmbulance.nfc.NO_NFC");                    
+                            location.href = "pages/error.html"; 
+                            break; 
+                        case "NFC_DISABLED":
+                            console.log("index.getAmbulance.nfc.NFC_DISABLED");                                
+                            //DEBUG: volver al principio
+                            activateNFC();                                                                                              
+                            break;
+                        default:
+                            console.log("index.getAmbulance.nfc.DEFAULT");
+                    }                    
+                }             
+            );
         }
     </script>
     
     <title>TraSANO</title>
 </head>
 
-<body>
+<body onLoad="javascript:onLoad();">
     <!-- Fixed navbar -->
     <nav class="navbar navbar-default navbar-static-top" role="navigation">
-        <div class="container">
-            <a class="navbar-brand pull-right" href="#">
-                    <span class="glyphicon glyphicon-menu-hamburger"></span> 
-            </a>          
+        <div class="container">          
+            <a class="navbar-brand pull-right" href="pages/user.html">
+                    <span class="glyphicon glyphicon-user"></span> 
+            </a>
+            <!-- LOGO MÁS PEQUEÑO -->           
+            <!-- <a class="navbar-brand" href="#"><img style="display: inline-block; height: 30px; margin-top: -5px" src="img/salud-madrid-logo.png" alt="TraSANO"></a>    -->      
+            <a class="navbar-brand" href="#"><img style="display: inline-block; height: 40px; margin-top: -10px" src="img/salud-madrid-logo.png" alt="TraSANO"></a>
         </div>
     </nav>
-    <!-- /fixed navbar -->  
+    <!-- Fixed navbar --> 
     
     <!-- Container -->
     <div class="container">
-        <div class="page-header">
-            <h1>Servicio</h1>
+        <div class="page-header text-center">
+            <h1>SERVICIO</h1>
         </div>
-      
-        <div class="jumbotron">
-            <h2>Transporte Sanitario No Urgente</h2>            
-            <p>         
-                <button type="button" class="btn btn-lg btn-success" data-toggle="modal" data-target="#nfcALERT">Solicitar ambulancia</button>
-                <!-- <a class="btn btn-lg btn-default" href="javascript:isNFC();" role="button">Aceptar</a> -->
-            </p>
-        </div> 
-        
-        <p>
-            <button type="button" class="btn btn-warning btn-lg">Reclamar ambulancia</button>
-        </p>
-        <p>
-            <button type="button" class="btn btn-danger btn-lg">Cancelar ambulancia</button>
-        </p>
-            
+        <div class="jumbotron" id="dniJumbotron"></div> 
+        <!-- <hr> -->      
+        <div id="getAmbulanceButton"></div>
+        <!-- <hr> --> 
+        <div id="claimAndCancelButton"></div>     
     </div> 
-    <!-- /container -->
-    
+    <!-- /container -->  
+
     <!-- Modal -->
-    <div class="modal fade" id="nfcALERT" tabindex="-1" role="dialog" aria-labelledby="nfcALERTLabel">
+    <div class="modal fade" id="trasanoMODAL" tabindex="-1" role="dialog" aria-labelledby="trasanoMODALLabel">
         <div class="modal-dialog modal-sm" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h4>Compruebe que la conexión NFC está activada</h4>
+                    <div id="trasanoModalHeader">
+                    </div>
                 </div>
-                <div class="modal-body">                    
-                    <p>Ajustes -> Más... -> NFC</p>
+                <div class="modal-body">
+                    <div id="trasanoModalBody"></div>
                 </div>
                 <div class="modal-footer">
-                    <a class="btn btn-lg btn-primary" href="javascript:cerrarAmbulancia();" role="button">Aceptar</a>
+                    <div id="trasanoModalFooter"></div>
                 </div>
             </div>
         </div>
     </div>
     <!-- /modal -->
 
-    <script type="text/javascript" src="cordova.js"></script>
-    <script type="text/javascript" src="js/index.js"></script>
-    <script type="text/javascript">
-        app.initialize();
-    </script>
+    <footer class="footer">
+        <div class="container">
+            <p class="text-muted pull-right">&copy; 2016 Trasano.</p>
+        </div>
+    </footer>
 
     <!-- Bootstrap core JavaScript -->
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
-    <script>window.jQuery || document.write('<script src="assets/js/vendor/jquery.min.js"><\/script>')</script>
     <script src="dist/js/bootstrap.min.js"></script>
     <!-- ================================================== -->
 </body>
